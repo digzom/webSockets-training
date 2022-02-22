@@ -10,6 +10,7 @@ const onError = (ws, err) => {
 // enviar mensagens de volta
 const onMessage = (ws, data) => {
   console.log(`onMessage: ${data}`)
+  broadcast(data)
   ws.send("recebido!")
 }
 
@@ -20,11 +21,21 @@ const onConnection = (ws, req) => {
   console.log("onConnection")
 }
 
+const corsValidation = (origin) => {
+  return (
+    process.env.CORS_ORIGIN === "*" ||
+    process.env.CORS_ORIGIN.startsWith(origin)
+  )
+}
+
 const verifyClient = (info, callback) => {
-  const chave = info.req // alguma lógica aqui, ainda não sei qual
+  if (!corsValidation(info.origin)) return callback(false)
+
+  const token = info.req.url.split("token=")[1]
 
   if (token) {
-    // valida o token
+    if (token === "1234") return callback(true)
+
     return callback(true)
   }
 
@@ -43,6 +54,7 @@ function broadcast(jsonObject) {
 module.exports = (server) => {
   const wss = new WebSocket.Server({
     server,
+    verifyClient,
   })
 
   wss.on("connection", onConnection)
