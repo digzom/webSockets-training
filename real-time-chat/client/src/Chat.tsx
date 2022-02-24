@@ -3,10 +3,9 @@ import {
   ApolloClient,
   InMemoryCache,
   ApolloProvider,
-  useQuery,
+  useSubscription,
   gql,
   useMutation,
-  OperationVariables,
 } from "@apollo/client"
 import {
   Container,
@@ -17,14 +16,23 @@ import {
   GridItem,
   FormLabel,
 } from "@chakra-ui/react"
+import { WebSocketLink } from "@apollo/client/link/ws"
+
+const link = new WebSocketLink({
+  uri: "ws://localhost:4000",
+  options: {
+    reconnect: true,
+  },
+})
 
 const client = new ApolloClient({
+  link,
   uri: "http://localhost:4000/",
   cache: new InMemoryCache(),
 })
 
 const GET_MESSAGES = gql`
-  query {
+  subscription {
     messages {
       id
       user
@@ -47,9 +55,7 @@ type DataType = {
   messages: MessageType[]
 }
 const Messages = ({ user }: { user?: string }) => {
-  const { data } = useQuery<DataType>(GET_MESSAGES, {
-    pollInterval: 500,
-  })
+  const { data } = useSubscription<DataType>(GET_MESSAGES)
 
   if (!data) return null
 
@@ -59,6 +65,7 @@ const Messages = ({ user }: { user?: string }) => {
         <Flex
           justifyContent={user === messageUser ? "flex-end" : "flex-start"}
           paddingBottom={"1em"}
+          key={id}
         >
           {user !== messageUser && (
             <Flex
@@ -94,7 +101,7 @@ type MessageUser = { user?: string; content?: string }
 const Chat = () => {
   const [postMessage] = useMutation(POST_MESSAGE)
   const [messageData, setMessageData] = useState<MessageUser>({
-    user: "Dickson",
+    user: "",
   })
 
   const onSend = () => {
@@ -131,7 +138,7 @@ const Chat = () => {
               setMessageData({ ...messageData, content: e.target.value })
             }
             onKeyDown={(e) => {
-              e.key === "13" && onSend()
+              e.key === "Enter" && onSend()
             }}
           />
         </GridItem>

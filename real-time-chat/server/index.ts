@@ -24,6 +24,11 @@ const typeDefs = `
 
 const subscribers = []
 const onMessagesUpdates = (fn) => subscribers.push(fn)
+const pubsub = new PubSub()
+
+type PubsubType = {
+  pubsub: PubSub
+}
 
 const resolvers = {
   Query: {
@@ -43,18 +48,17 @@ const resolvers = {
   },
   Subscription: {
     messages: {
-      subscribe: (parent, args, { pubsub }) => {
+      subscribe: (parent, args, { pubsub }: PubsubType) => {
         const channel = Math.random().toString(36).slice(2, 15)
         onMessagesUpdates(() => pubsub.publish(channel, { messages }))
-        setTimeout(() => () => pubsub.publish(channel, { messages }), 0)
-        return pubsub.asyncIteretor(channel)
+        setTimeout(() => pubsub.publish(channel, { messages }), 0)
+        return pubsub.asyncIterator(channel)
       },
     },
   },
 }
-const pubsub = new PubSub()
 
-const server = new GraphQLServer({ typeDefs, resolvers })
+const server = new GraphQLServer({ typeDefs, resolvers, context: { pubsub } })
 
 server.start(({ port }) => {
   console.log(`Server running on http://localhost:${port}/`)
